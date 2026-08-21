@@ -14,114 +14,13 @@ export type Database = {
   }
   public: {
     Tables: {
-      prayer_comments: {
-        Row: {
-          author: string
-          created_at: string
-          id: string
-          prayer_id: string
-          text: string
-        }
-        Insert: {
-          author?: string
-          created_at?: string
-          id?: string
-          prayer_id: string
-          text: string
-        }
-        Update: {
-          author?: string
-          created_at?: string
-          id?: string
-          prayer_id?: string
-          text?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "prayer_comments_prayer_id_fkey"
-            columns: ["prayer_id"]
-            isOneToOne: false
-            referencedRelation: "prayers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      prayer_likes: {
-        Row: {
-          created_at: string
-          device_id: string
-          id: string
-          prayer_id: string
-        }
-        Insert: {
-          created_at?: string
-          device_id: string
-          id?: string
-          prayer_id: string
-        }
-        Update: {
-          created_at?: string
-          device_id?: string
-          id?: string
-          prayer_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "prayer_likes_prayer_id_fkey"
-            columns: ["prayer_id"]
-            isOneToOne: false
-            referencedRelation: "prayers"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      prayers: {
-        Row: {
-          author: string
-          category: string
-          created_at: string
-          id: string
-          initials: string
-          text: string
-        }
-        Insert: {
-          author?: string
-          category?: string
-          created_at?: string
-          id?: string
-          initials?: string
-          text: string
-        }
-        Update: {
-          author?: string
-          category?: string
-          created_at?: string
-          id?: string
-          initials?: string
-          text?: string
-        }
-        Relationships: []
-      }
-      profanity_words: {
-        Row: {
-          word: string
-        }
-        Insert: {
-          word: string
-        }
-        Update: {
-          word?: string
-        }
-        Relationships: []
-      }
+      [_ in never]: never
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      contains_profanity: { Args: { _text: string }; Returns: boolean }
-      normalize_tr: { Args: { _text: string }; Returns: string }
-      purge_expired_prayers: { Args: never; Returns: undefined }
+      [_ in never]: never
     }
     Enums: {
       [_ in never]: never
