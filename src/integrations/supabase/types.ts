@@ -102,12 +102,26 @@ export type Database = {
         }
         Relationships: []
       }
+      profanity_words: {
+        Row: {
+          word: string
+        }
+        Insert: {
+          word: string
+        }
+        Update: {
+          word?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      contains_profanity: { Args: { _text: string }; Returns: boolean }
+      normalize_tr: { Args: { _text: string }; Returns: string }
+      purge_expired_prayers: { Args: never; Returns: undefined }
     }
     Enums: {
       [_ in never]: never
