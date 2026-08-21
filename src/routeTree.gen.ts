@@ -10,33 +10,101 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as EsmaRouteImport } from './routes/esma'
+import { Route as HalkaRouteImport } from './routes/halka'
+import { Route as KibleRouteImport } from './routes/kible'
+import { Route as OkuRouteImport } from './routes/oku'
+import { Route as VakitRouteImport } from './routes/vakit'
+import { Route as ZikirRouteImport } from './routes/zikir'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const EsmaRoute = EsmaRouteImport.update({
+  id: '/esma',
+  path: '/esma',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HalkaRoute = HalkaRouteImport.update({
+  id: '/halka',
+  path: '/halka',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const KibleRoute = KibleRouteImport.update({
+  id: '/kible',
+  path: '/kible',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OkuRoute = OkuRouteImport.update({
+  id: '/oku',
+  path: '/oku',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VakitRoute = VakitRouteImport.update({
+  id: '/vakit',
+  path: '/vakit',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ZikirRoute = ZikirRouteImport.update({
+  id: '/zikir',
+  path: '/zikir',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/esma': typeof EsmaRoute
+  '/halka': typeof HalkaRoute
+  '/kible': typeof KibleRoute
+  '/oku': typeof OkuRoute
+  '/vakit': typeof VakitRoute
+  '/zikir': typeof ZikirRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/esma': typeof EsmaRoute
+  '/halka': typeof HalkaRoute
+  '/kible': typeof KibleRoute
+  '/oku': typeof OkuRoute
+  '/vakit': typeof VakitRoute
+  '/zikir': typeof ZikirRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/esma': typeof EsmaRoute
+  '/halka': typeof HalkaRoute
+  '/kible': typeof KibleRoute
+  '/oku': typeof OkuRoute
+  '/vakit': typeof VakitRoute
+  '/zikir': typeof ZikirRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/esma' | '/halka' | '/kible' | '/oku' | '/vakit' | '/zikir'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/esma' | '/halka' | '/kible' | '/oku' | '/vakit' | '/zikir'
+  id:
+    | '__root__'
+    | '/'
+    | '/esma'
+    | '/halka'
+    | '/kible'
+    | '/oku'
+    | '/vakit'
+    | '/zikir'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  EsmaRoute: typeof EsmaRoute
+  HalkaRoute: typeof HalkaRoute
+  KibleRoute: typeof KibleRoute
+  OkuRoute: typeof OkuRoute
+  VakitRoute: typeof VakitRoute
+  ZikirRoute: typeof ZikirRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,11 +116,59 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/esma': {
+      id: '/esma'
+      path: '/esma'
+      fullPath: '/esma'
+      preLoaderRoute: typeof EsmaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/halka': {
+      id: '/halka'
+      path: '/halka'
+      fullPath: '/halka'
+      preLoaderRoute: typeof HalkaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/kible': {
+      id: '/kible'
+      path: '/kible'
+      fullPath: '/kible'
+      preLoaderRoute: typeof KibleRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/oku': {
+      id: '/oku'
+      path: '/oku'
+      fullPath: '/oku'
+      preLoaderRoute: typeof OkuRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/vakit': {
+      id: '/vakit'
+      path: '/vakit'
+      fullPath: '/vakit'
+      preLoaderRoute: typeof VakitRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/zikir': {
+      id: '/zikir'
+      path: '/zikir'
+      fullPath: '/zikir'
+      preLoaderRoute: typeof ZikirRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  EsmaRoute: EsmaRoute,
+  HalkaRoute: HalkaRoute,
+  KibleRoute: KibleRoute,
+  OkuRoute: OkuRoute,
+  VakitRoute: VakitRoute,
+  ZikirRoute: ZikirRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
