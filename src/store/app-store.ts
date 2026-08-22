@@ -95,11 +95,16 @@ type State = {
   halkaCounts: Record<string, number>;
   halkaTargets: Record<string, number>;
   halkaStep: number;
+  halkaGoal: number;
+  halkaHistory: Record<string, number>;
+
+  esmaFavorites: number[];
+  lastRead: { mode: BookMode; index: number; at: number } | null;
 
   readDays: string[];
   lastReadAt: number | null;
 
-  alarms: Record<string, { enabled: boolean; lead: number }>;
+  alarms: Record<string, { enabled: boolean; leads: number[] }>;
 
   salahLog: Record<string, Record<string, "done" | "missed">>;
 };
@@ -125,11 +130,15 @@ type Actions = {
   addHalka: (stepId: string, by: number) => void;
   resetHalka: (stepId: string) => void;
   setHalkaStep: (i: number) => void;
+  setHalkaGoal: (n: number) => void;
+
+  toggleEsmaFavorite: (no: number) => void;
 
   markRead: () => void;
 
   toggleAlarm: (key: string) => void;
-  setAlarmLead: (key: string, lead: number) => void;
+  toggleAlarmLead: (key: string, lead: number) => void;
+  setAllAlarms: (enabled: boolean) => void;
 
   setSalah: (prayer: string, status: "done" | "missed") => void;
 };
@@ -158,6 +167,11 @@ export const useAppStore = create<State & Actions>()(
       halkaCounts: {},
       halkaTargets: {},
       halkaStep: 0,
+      halkaGoal: 500,
+      halkaHistory: {},
+
+      esmaFavorites: [],
+      lastRead: null,
 
       readDays: [],
       lastReadAt: null,
@@ -169,7 +183,10 @@ export const useAppStore = create<State & Actions>()(
 
       setMode: (mode) => set({ mode }),
       setPage: (mode, index) =>
-        set((s) => ({ pageIndex: { ...s.pageIndex, [mode]: Math.max(0, index) } })),
+        set((s) => ({
+          pageIndex: { ...s.pageIndex, [mode]: Math.max(0, index) },
+          lastRead: { mode, index: Math.max(0, index), at: Date.now() },
+        })),
       toggleBookmark: (b) =>
         set((s) => {
           const exists = s.bookmarks.some((x) => x.mode === b.mode && x.index === b.index);
@@ -234,12 +251,22 @@ export const useAppStore = create<State & Actions>()(
 
       addHalka: (stepId, by) =>
         set((s) => {
-          const next = Math.max(0, (s.halkaCounts[stepId] ?? 0) + by);
+          const prev = s.halkaCounts[stepId] ?? 0;
+          const next = Math.max(0, prev + by);
           let target = s.halkaTargets[stepId] ?? 100;
           while (next >= target) target *= 2;
+          const key = todayKey();
+          const gained = Math.max(0, next - prev);
+          const history = { ...s.halkaHistory, [key]: (s.halkaHistory[key] ?? 0) + gained };
+          const trimmed = Object.fromEntries(
+            Object.entries(history)
+              .sort((a, b) => (a[0] < b[0] ? 1 : -1))
+              .slice(0, 90),
+          );
           return {
             halkaCounts: { ...s.halkaCounts, [stepId]: next },
             halkaTargets: { ...s.halkaTargets, [stepId]: target },
+            halkaHistory: trimmed,
           };
         }),
       resetHalka: (stepId) =>
@@ -248,6 +275,14 @@ export const useAppStore = create<State & Actions>()(
           halkaTargets: { ...s.halkaTargets, [stepId]: 100 },
         })),
       setHalkaStep: (halkaStep) => set({ halkaStep }),
+      setHalkaGoal: (n) => set({ halkaGoal: Math.max(10, Math.round(n)) }),
+
+      toggleEsmaFavorite: (no) =>
+        set((s) => ({
+          esmaFavorites: s.esmaFavorites.includes(no)
+            ? s.esmaFavorites.filter((x) => x !== no)
+            : [...s.esmaFavorites, no],
+        })),
 
 
 
@@ -262,8 +297,32 @@ export const useAppStore = create<State & Actions>()(
 
       toggleAlarm: (key) =>
         set((s) => {
-          const cur = s.alarms[key] ?? { enabled: false, lead: 15 };
-          return { alarms: { ...s.alarms, [key]: { ...cur, enabled: !cur.enabled } } };
+          const cur = s.alarms[key] ?? { enabled: false, leads: [0] };
+          return {
+            alarms: {
+              ...s.alarms,
+              [key]: { leads: cur.leads.length ? cur.leads : [0], enabled: !cur.enabled },
+            },
+          };
+        }),
+      toggleAlarmLead: (key, lead) =>
+        set((s) => {
+          const cur = s.alarms[key] ?? { enabled: true, leads: [0] };
+          const has = cur.leads.includes(lead);
+          const leads = has ? cur.leads.filter((l) => l !== lead) : [...cur.leads, lead].sort((a, b) => a - b);
+          return {
+            alarms: { ...s.alarms, [key]: { enabled: leads.length > 0, leads } },
+          };
+        }),
+      setAllAlarms: (enabled) =>
+        set((s) => {
+          const keys = new Set([...Object.keys(s.alarms), "imsak", "gunes", "ogle", "ikindi", "aksam", "yatsi"]);
+          const alarms: Record<string, { enabled: boolean; leads: number[] }> = {};
+          for (const k of keys) {
+            const cur = s.alarms[k] ?? { enabled: false, leads: [0] };
+            alarms[k] = { enabled, leads: cur.leads.length ? cur.leads : [0] };
+          }
+          return { alarms };
         }),
       setSalah: (prayer, status) =>
         set((s) => {
@@ -278,18 +337,29 @@ export const useAppStore = create<State & Actions>()(
           return { salahLog: { ...Object.fromEntries(entries), [key]: day } };
         }),
 
-      setAlarmLead: (key, lead) =>
-        set((s) => {
-          const cur = s.alarms[key] ?? { enabled: false, lead: 15 };
-          return { alarms: { ...s.alarms, [key]: { ...cur, lead } } };
-        }),
     }),
     {
       name: "delail-store",
-      version: 3,
+      version: 4,
       migrate: (persistedState) => {
         const state = (persistedState ?? {}) as Record<string, unknown>;
-        return { ...state, mode: "latin", prayers: [], amined: [] };
+        const oldAlarms = (state["alarms"] ?? {}) as Record<string, any>;
+        const alarms: Record<string, { enabled: boolean; leads: number[] }> = {};
+        for (const [k, v] of Object.entries(oldAlarms)) {
+          if (v && Array.isArray(v.leads)) alarms[k] = { enabled: !!v.enabled, leads: v.leads };
+          else if (v) alarms[k] = { enabled: !!v.enabled, leads: [Number(v.lead ?? 15)] };
+        }
+        return {
+          ...state,
+          mode: "latin",
+          prayers: [],
+          amined: [],
+          alarms,
+          esmaFavorites: (state["esmaFavorites"] as number[]) ?? [],
+          halkaGoal: (state["halkaGoal"] as number) ?? 500,
+          halkaHistory: (state["halkaHistory"] as Record<string, number>) ?? {},
+          lastRead: (state["lastRead"] as unknown) ?? null,
+        };
       },
       skipHydration: true,
       storage: createJSONStorage(() => localStorage),
