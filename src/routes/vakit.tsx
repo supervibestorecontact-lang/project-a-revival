@@ -1,30 +1,44 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { BellRing, CheckCheck, Clock, LocateFixed, MapPin, TriangleAlert } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  BellRing,
+  CheckCheck,
+  Clock,
+  LocateFixed,
+  MapPin,
+  ShieldCheck,
+  TriangleAlert,
+} from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
 import { AppShell, ScreenHeader } from "@/components/app-shell";
 import { useAppStore } from "@/store/app-store";
 import { cn } from "@/lib/utils";
 import {
-  computePrayerTimes,
   formatMinutes,
   PRAYER_LABELS,
   PRAYER_ORDER,
-  type PrayerKey,
-} from "@/lib/prayer-times";
+  shortRemaining,
+  usePrayerClock,
+} from "@/lib/prayer-clock";
+import {
+  notifyState,
+  requestNotifyPermission,
+  sendTestNotification,
+  type NotifyState,
+} from "@/lib/notifications";
 
 export const Route = createFileRoute("/vakit")({
   head: () => ({
     meta: [
-      { title: "Namaz Vakitleri — Günlük Ezan Saatleri" },
+      { title: "Namaz Vakitleri — Ezan Saatleri ve Hatırlatmalar" },
       {
         name: "description",
         content:
-          "Konumunuza göre imsak, güneş, öğle, ikindi, akşam ve yatsı vakitleri; bir sonraki vakte kalan süreyi canlı takip edin.",
+          "Konumunuza göre imsak, güneş, öğle, ikindi, akşam ve yatsı vakitleri; ezan vaktinde veya 5/10/15/30/60 dakika önce hatırlatma ve bildirim testi.",
       },
-      { property: "og:title", content: "Namaz Vakitleri" },
+      { property: "og:title", content: "Namaz Vakitleri ve Ezan Hatırlatmaları" },
       {
         property: "og:description",
-        content: "Bulunduğunuz yerin günlük namaz vakitleri ve kalan süre sayacı.",
+        content: "Günlük vakitler, kalan süre sayacı ve güçlü bildirim ayarları.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
@@ -33,9 +47,7 @@ export const Route = createFileRoute("/vakit")({
   component: PrayerTimesPage,
 });
 
-const ISTANBUL = { lat: 41.0082, lng: 28.9784 };
-
-const SALAH_KEYS: PrayerKey[] = ["imsak", "ogle", "ikindi", "aksam", "yatsi"];
+const SALAH_KEYS = ["imsak", "ogle", "ikindi", "aksam", "yatsi"] as const;
 const SALAH_LABELS: Record<string, string> = {
   imsak: "Sabah",
   ogle: "Öğle",
@@ -44,96 +56,13 @@ const SALAH_LABELS: Record<string, string> = {
   yatsi: "Yatsı",
 };
 
+const LEAD_OPTIONS = [0, 5, 10, 15, 30, 60];
+const leadLabel = (lead: number) =>
+  lead === 0 ? "Ezan vakti" : lead === 60 ? "1 saat önce" : `${lead} dk önce`;
+
 function PrayerTimesPage() {
-  const [coords, setCoords] = useState<{ lat: number; lng: number }>(ISTANBUL);
-  const [located, setLocated] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [placeName, setPlaceName] = useState<string | null>(null);
-  const [placeLoading, setPlaceLoading] = useState(false);
-  const [now, setNow] = useState<Date | null>(null);
-
-  useEffect(() => {
-    setNow(new Date());
-    const id = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(id);
-  }, []);
-
-  const requestLocation = useCallback(() => {
-    if (typeof navigator === "undefined" || !navigator.geolocation) {
-      setError("Cihazınız konum servisini desteklemiyor. İstanbul vakitleri gösteriliyor.");
-      return;
-    }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-        setLocated(true);
-        setError(null);
-      },
-      () => setError("Konum izni verilmedi. İstanbul vakitleri gösteriliyor."),
-      { enableHighAccuracy: false, timeout: 10000 },
-    );
-  }, []);
-
-  useEffect(() => {
-    requestLocation();
-  }, [requestLocation]);
-
-  useEffect(() => {
-    let cancelled = false;
-    setPlaceLoading(true);
-    fetch(
-      `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${coords.lat}&longitude=${coords.lng}&localityLanguage=tr`,
-    )
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => {
-        if (cancelled || !data) return;
-        const province: string | undefined = data.principalSubdivision || data.locality;
-        const district: string | undefined = data.city || data.locality;
-        const parts = [province, district].filter(
-          (v, i, arr): v is string => Boolean(v) && arr.indexOf(v) === i,
-        );
-        setPlaceName(parts.length ? parts.join(" · ") : null);
-      })
-      .catch(() => {
-        if (!cancelled) setPlaceName(null);
-      })
-      .finally(() => {
-        if (!cancelled) setPlaceLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [coords.lat, coords.lng]);
-
-  const times = useMemo(
-    () => computePrayerTimes(now ?? new Date(), coords.lat, coords.lng),
-    [now?.getDate(), coords.lat, coords.lng],
-  );
-
-  const nowMin = now ? now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60 : 0;
-
-  const nextKey: PrayerKey | null = now
-    ? (PRAYER_ORDER.find((k) => times[k] > nowMin) ?? null)
-    : null;
-
-  const activeKey: PrayerKey | null = now
-    ? (() => {
-        const past = PRAYER_ORDER.filter((k) => times[k] <= nowMin);
-        return past.length ? past[past.length - 1]! : "yatsi";
-      })()
-    : null;
-
-  const remaining = now
-    ? (nextKey ? times[nextKey] - nowMin : times.imsak + 24 * 60 - nowMin)
-    : 0;
-
-  const remainingLabel = (() => {
-    const total = Math.max(0, Math.floor(remaining * 60));
-    const h = Math.floor(total / 3600);
-    const m = Math.floor((total % 3600) / 60);
-    const s = total % 60;
-    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
-  })();
+  const clock = usePrayerClock();
+  const { times, nextKey, activeKey, remaining, remainingLabel, ready } = clock;
 
   const salahLog = useAppStore((s) => s.salahLog);
   const setSalah = useAppStore((s) => s.setSalah);
@@ -143,46 +72,35 @@ function PrayerTimesPage() {
 
   const alarms = useAppStore((s) => s.alarms);
   const toggleAlarm = useAppStore((s) => s.toggleAlarm);
-  const setAlarmLead = useAppStore((s) => s.setAlarmLead);
-  const [permission, setPermission] = useState<NotificationPermission | "unsupported">("default");
-  const firedRef = useRef<Set<string>>(new Set());
+  const toggleAlarmLead = useAppStore((s) => s.toggleAlarmLead);
+  const setAllAlarms = useAppStore((s) => s.setAllAlarms);
+
+  const [permission, setPermission] = useState<NotifyState>("default");
+  const [testMsg, setTestMsg] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    if (typeof window === "undefined" || !("Notification" in window)) {
-      setPermission("unsupported");
-      return;
-    }
-    setPermission(Notification.permission);
+    setMounted(true);
+    setPermission(notifyState());
+    const onVisible = () => setPermission(notifyState());
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
   }, []);
 
   const enableNotifications = useCallback(async () => {
-    if (typeof window === "undefined" || !("Notification" in window)) return;
-    const res = await Notification.requestPermission();
-    setPermission(res);
+    setPermission(await requestNotifyPermission());
   }, []);
 
-  // Alarm kontrolü: her saniye tetiklenen `now` üzerinden kalan süreyi ölçer.
-  useEffect(() => {
-    if (!now || permission !== "granted") return;
-    const dayKey = now.toISOString().slice(0, 10);
-    for (const key of PRAYER_ORDER) {
-      const cfg = alarms[key];
-      if (!cfg?.enabled) continue;
-      const t = times[key];
-      if (Number.isNaN(t)) continue;
-      const diff = t - nowMin;
-      if (diff <= cfg.lead && diff > cfg.lead - 1 / 30) {
-        const id = `${dayKey}-${key}-${cfg.lead}`;
-        if (firedRef.current.has(id)) continue;
-        firedRef.current.add(id);
-        new Notification(`${PRAYER_LABELS[key]} vakti yaklaşıyor`, {
-          body: `${cfg.lead} dakika sonra ${PRAYER_LABELS[key]} (${formatMinutes(t)}).`,
-        });
-        if (navigator.vibrate) navigator.vibrate([120, 60, 120]);
-      }
-    }
-  }, [now, permission, alarms, times, nowMin]);
+  const runTest = useCallback(async () => {
+    const res = await sendTestNotification();
+    setPermission(notifyState());
+    setTestMsg(res.message);
+  }, []);
 
+  const activeAlarmCount = mounted
+    ? PRAYER_ORDER.filter((k) => alarms[k]?.enabled).length
+    : 0;
+  const notificationsWorking = permission === "granted" && activeAlarmCount > 0;
 
   return (
     <AppShell>
@@ -192,23 +110,22 @@ function PrayerTimesPage() {
         <div className="bg-emerald-gradient relative px-5 py-5 text-primary-foreground">
           <div className="pointer-events-none absolute inset-0 opacity-30 [background:radial-gradient(120%_100%_at_100%_0%,var(--gold),transparent_55%)]" />
           <div className="relative text-center">
-            <p className="text-[11px] uppercase tracking-[0.2em] opacity-80">Sıradaki vakit</p>
+            <p className="text-[11px] uppercase tracking-[0.2em] opacity-80">
+              Şu an {activeKey ? PRAYER_LABELS[activeKey] : "—"} vakti · sıradaki
+            </p>
             <p className="font-display mt-1 text-2xl">
-              {nextKey ? PRAYER_LABELS[nextKey] : now ? "İmsak" : "—"}
+              {nextKey ? PRAYER_LABELS[nextKey] : ready ? "İmsak" : "—"}
             </p>
             <p className="mt-2 font-display text-4xl tabular-nums text-gold">
-              {now ? remainingLabel : "--:--:--"}
+              {ready ? remainingLabel : "--:--:--"}
             </p>
+            <p className="mt-1 text-xs opacity-85">{ready ? `${shortRemaining(remaining)} kaldı` : ""}</p>
             <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-black/15 px-3 py-1 text-xs font-medium">
               <MapPin className="h-3.5 w-3.5" />
-              {placeLoading && !placeName
-                ? "Konum belirleniyor…"
-                : (placeName ?? (located ? "Konumunuz" : "İstanbul (varsayılan)"))}
+              {clock.place ?? (clock.located ? "Konumunuz" : "İstanbul (varsayılan)")}
             </p>
             <p className="mt-1 text-xs opacity-80">
-              {now
-                ? now.toLocaleDateString("tr-TR", { dateStyle: "long" })
-                : "Yükleniyor…"}
+              {clock.now ? clock.now.toLocaleDateString("tr-TR", { dateStyle: "long" }) : "Yükleniyor…"}
             </p>
           </div>
         </div>
@@ -238,9 +155,7 @@ function PrayerTimesPage() {
                   <Clock className="h-4 w-4" />
                 </span>
                 <div>
-                  <p className="text-sm font-semibold text-card-foreground">
-                    {PRAYER_LABELS[key]}
-                  </p>
+                  <p className="text-sm font-semibold text-card-foreground">{PRAYER_LABELS[key]}</p>
                   {isNext ? (
                     <p className="text-[11px] text-gold">Sıradaki</p>
                   ) : isActive ? (
@@ -249,7 +164,7 @@ function PrayerTimesPage() {
                 </div>
               </div>
               <p className="font-display text-xl tabular-nums text-card-foreground">
-                {now ? formatMinutes(times[key]) : "--:--"}
+                {ready ? formatMinutes(times[key]) : "--:--"}
               </p>
             </div>
           );
@@ -278,11 +193,9 @@ function PrayerTimesPage() {
                 className="flex items-center justify-between gap-3 rounded-2xl border border-border/70 bg-background/60 px-3 py-2.5"
               >
                 <div>
-                  <p className="text-sm font-semibold text-card-foreground">
-                    {SALAH_LABELS[key]}
-                  </p>
+                  <p className="text-sm font-semibold text-card-foreground">{SALAH_LABELS[key]}</p>
                   <p className="text-[11px] tabular-nums text-muted-foreground">
-                    {now ? formatMinutes(times[key]) : "--:--"}
+                    {ready ? formatMinutes(times[key]) : "--:--"}
                   </p>
                 </div>
                 <div className="flex gap-2">
@@ -315,41 +228,79 @@ function PrayerTimesPage() {
         </div>
       </section>
 
+      {/* ---- Bildirim & alarm merkezi ---- */}
       <section className="mt-5 rounded-[28px] border border-border bg-card p-4 shadow-soft">
         <div className="mb-3 flex items-center gap-2">
           <span className="bg-emerald-gradient flex h-9 w-9 items-center justify-center rounded-2xl text-primary-foreground">
             <BellRing className="h-4 w-4" />
           </span>
-          <div>
-            <p className="text-sm font-semibold text-card-foreground">Namaz Alarmı</p>
+          <div className="flex-1">
+            <p className="text-sm font-semibold text-card-foreground">Ezan & Hatırlatma</p>
             <p className="text-[11px] text-muted-foreground">
-              Her vakit için hatırlatmayı aç ve süreyi seç
+              Her vakit için ezan anı ve 5/10/15/30/60 dk önce hatırlatma
             </p>
           </div>
         </div>
 
-        {permission === "unsupported" ? (
-          <p className="mb-3 rounded-2xl bg-secondary px-4 py-3 text-xs text-secondary-foreground">
-            Bu cihaz bildirimleri desteklemiyor.
-          </p>
-        ) : permission !== "granted" ? (
+        {/* Durum rozeti */}
+        <div
+          className={cn(
+            "mb-3 flex items-start gap-2 rounded-2xl px-3 py-2.5 text-xs",
+            notificationsWorking
+              ? "bg-secondary text-secondary-foreground"
+              : "bg-destructive/10 text-destructive",
+          )}
+        >
+          <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>
+            {permission === "unsupported"
+              ? "Bu cihaz/tarayıcı bildirimleri desteklemiyor. Uygulamayı ana ekrana ekleyip tekrar deneyin."
+              : permission === "denied"
+                ? "Bildirimler engellenmiş. Telefon ayarları → Uygulamalar → bu uygulama → Bildirimler bölümünden izin verin, sonra sayfayı yenileyin."
+                : permission !== "granted"
+                  ? "Bildirim izni henüz verilmedi. Hatırlatmaların çalışması için izin verin."
+                  : activeAlarmCount === 0
+                    ? "İzin verildi ancak hiçbir vakit için hatırlatma açık değil."
+                    : `Bildirimler aktif · ${activeAlarmCount} vakit için hatırlatma kurulu.`}
+          </span>
+        </div>
+
+        <div className="mb-3 grid grid-cols-2 gap-2">
+          {permission !== "granted" && permission !== "unsupported" ? (
+            <button
+              onClick={enableNotifications}
+              className="bg-emerald-gradient col-span-2 rounded-2xl py-3 text-sm font-semibold text-primary-foreground"
+            >
+              Bildirimlere İzin Ver
+            </button>
+          ) : null}
           <button
-            onClick={enableNotifications}
-            className="bg-emerald-gradient mb-3 w-full rounded-2xl py-3 text-sm font-semibold text-primary-foreground"
+            onClick={runTest}
+            className="rounded-2xl border border-border py-3 text-sm font-semibold text-primary"
           >
-            Bildirimlere İzin Ver
+            Bildirim Testi
           </button>
+          <button
+            onClick={() => setAllAlarms(activeAlarmCount === 0)}
+            className="rounded-2xl border border-border py-3 text-sm font-semibold text-primary"
+          >
+            {activeAlarmCount === 0 ? "Tümünü Aç" : "Tümünü Kapat"}
+          </button>
+        </div>
+
+        {testMsg ? (
+          <p className="mb-3 rounded-2xl bg-secondary px-3 py-2.5 text-[11px] text-secondary-foreground">
+            {testMsg}
+          </p>
         ) : null}
 
         <div className="space-y-2">
           {PRAYER_ORDER.map((key) => {
-            const cfg = alarms[key] ?? { enabled: false, lead: 15 };
+            const cfg = (mounted && alarms[key]) || { enabled: false, leads: [0] };
             return (
               <div key={key} className="rounded-2xl border border-border/70 bg-background/60 px-3 py-2.5">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-semibold text-card-foreground">
-                    {PRAYER_LABELS[key]}
-                  </p>
+                  <p className="text-sm font-semibold text-card-foreground">{PRAYER_LABELS[key]}</p>
                   <button
                     onClick={() => toggleAlarm(key)}
                     role="switch"
@@ -370,20 +321,23 @@ function PrayerTimesPage() {
                 </div>
                 {cfg.enabled ? (
                   <div className="mt-2 grid grid-cols-3 gap-2">
-                    {[15, 30, 60].map((lead) => (
-                      <button
-                        key={lead}
-                        onClick={() => setAlarmLead(key, lead)}
-                        className={cn(
-                          "rounded-xl border px-2 py-1.5 text-[11px] font-semibold transition-colors",
-                          cfg.lead === lead
-                            ? "border-gold/70 bg-secondary text-primary"
-                            : "border-border text-muted-foreground",
-                        )}
-                      >
-                        {lead === 60 ? "1 saat önce" : `${lead} dk önce`}
-                      </button>
-                    ))}
+                    {LEAD_OPTIONS.map((lead) => {
+                      const on = cfg.leads.includes(lead);
+                      return (
+                        <button
+                          key={lead}
+                          onClick={() => toggleAlarmLead(key, lead)}
+                          className={cn(
+                            "rounded-xl border px-2 py-1.5 text-[11px] font-semibold transition-colors",
+                            on
+                              ? "border-gold/70 bg-secondary text-primary"
+                              : "border-border text-muted-foreground",
+                          )}
+                        >
+                          {leadLabel(lead)}
+                        </button>
+                      );
+                    })}
                   </div>
                 ) : null}
               </div>
@@ -391,27 +345,29 @@ function PrayerTimesPage() {
           })}
         </div>
         <p className="mt-3 text-[11px] text-muted-foreground">
-          Hatırlatmalar uygulama açıkken çalışır.
+          Hatırlatmalar cihazınızda saklanır; telefon yeniden başlasa bile ayarlar korunur ve
+          uygulama her açıldığında bildirimler otomatik kontrol edilip yeniden planlanır. En güvenilir
+          sonuç için uygulamayı ana ekrana ekleyin ve pil optimizasyonundan muaf tutun.
         </p>
       </section>
 
       <button
-        onClick={requestLocation}
+        onClick={clock.requestLocation}
         className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-card py-3 text-sm font-semibold"
       >
         <LocateFixed className="h-4 w-4 text-primary" />
-        {located ? "Konumu Yenile" : "Konumumu Kullan"}
+        {clock.located ? "Konumu Yenile" : "Konumumu Kullan"}
       </button>
 
-      {error ? (
+      {clock.error ? (
         <p className="mt-4 flex items-start gap-2 rounded-2xl bg-secondary px-4 py-3 text-xs text-secondary-foreground">
-          <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" /> {error}
+          <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" /> {clock.error}
         </p>
       ) : null}
 
       <p className="mt-4 text-center text-[11px] text-muted-foreground">
-        Vakitler cihazınızda hesaplanır (İmsak 18°, Yatsı 17°). Yerel takvimle küçük farklar
-        olabilir.
+        Vakitler cihazınızda hesaplanır (İmsak 18°, Yatsı 17°) — internet olmadan da çalışır. Yerel
+        takvimle küçük farklar olabilir.
       </p>
     </AppShell>
   );
