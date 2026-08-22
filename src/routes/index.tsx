@@ -1,15 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   BookOpen,
-  Bell,
+  BellRing,
   ChevronRight,
   Clock,
   Compass,
   Flame,
-  Infinity as Loop,
   Mail,
+  MapPin,
   Send,
-  Settings,
   Sparkles,
 } from "lucide-react";
 
@@ -18,20 +17,28 @@ import { AppShell } from "@/components/app-shell";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { EDITIONS } from "@/lib/books";
 import { currentStreak, useAppStore } from "@/store/app-store";
+import {
+  formatMinutes,
+  PRAYER_LABELS,
+  PRAYER_ORDER,
+  shortRemaining,
+  usePrayerClock,
+} from "@/lib/prayer-clock";
+import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Delâilü'l-Hayrât — Günlük Vird ve Salavât" },
+      { title: "Namaz Vakti & Delâilü'l-Hayrât — Vakit, Ezan ve Vird" },
       {
         name: "description",
         content:
-          "Günlük hizb takibi, salavât zikirmatiği, Esmâü'l-Hüsnâ ve kıble pusulası ile Delâilü'l-Hayrât okuma rehberiniz.",
+          "Açılır açılmaz bulunduğunuz vakti, sonraki namazı ve kalan süreyi görün; ezan hatırlatmaları, Delâil okuma, zikir halkası ve kıble tek uygulamada.",
       },
-      { property: "og:title", content: "Delâilü'l-Hayrât — Günlük Vird ve Salavât" },
+      { property: "og:title", content: "Namaz Vakti & Delâilü'l-Hayrât" },
       {
         property: "og:description",
-        content: "Günün hizbini oku, salavât çek, Esmâ zikret ve kıbleyi bul.",
+        content: "Sonraki namaza kalan süre, ezan hatırlatmaları, Delâil, zikir ve kıble.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -43,11 +50,8 @@ export const Route = createFileRoute("/")({
 const DUA_OF_DAY = {
   arabic: "اَللّٰهُمَّ صَلِّ عَلٰى سَيِّدِنَا مُحَمَّدٍ وَعَلٰى اٰلِهِ وَصَحْبِهِ وَسَلِّمْ",
   translit: "Allâhümme salli alâ seyyidinâ Muhammedin ve alâ âlihî ve sahbihî ve sellim",
-  meaning:
-    "Allah'ım! Efendimiz Muhammed'e, âline ve ashâbına salât ve selâm eyle.",
+  meaning: "Allah'ım! Efendimiz Muhammed'e, âline ve ashâbına salât ve selâm eyle.",
 };
-
-
 
 function QuickCard({
   to,
@@ -77,10 +81,125 @@ function QuickCard({
   );
 }
 
+function PrayerHero() {
+  const clock = usePrayerClock();
+  const { times, nextKey, activeKey, remaining, remainingLabel, progress, ready } = clock;
+
+  return (
+    <section className="animate-rise mb-4 overflow-hidden rounded-[28px] border border-border bg-card shadow-soft">
+      <div className="bg-emerald-gradient relative px-5 pb-5 pt-4 text-primary-foreground">
+        <div className="pointer-events-none absolute inset-0 opacity-30 [background:radial-gradient(120%_100%_at_100%_0%,var(--gold),transparent_55%)]" />
+        <div className="relative">
+          <div className="flex items-center justify-between text-xs">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-black/15 px-3 py-1 font-medium">
+              <MapPin className="h-3.5 w-3.5" />
+              {clock.place ?? (clock.located ? "Konumunuz" : "İstanbul")}
+            </span>
+            <span className="opacity-85">
+              Şu an: <b>{activeKey ? PRAYER_LABELS[activeKey] : "—"}</b> vakti
+            </span>
+          </div>
+
+          <p className="mt-4 text-center text-[11px] uppercase tracking-[0.22em] opacity-85">
+            {nextKey ? PRAYER_LABELS[nextKey] : "İmsak"} vaktine kalan
+          </p>
+          <p className="mt-1 text-center font-display text-[46px] leading-none tabular-nums text-gold">
+            {ready ? remainingLabel : "--:--:--"}
+          </p>
+          <p className="mt-2 text-center text-sm font-medium opacity-90">
+            {ready
+              ? `${nextKey ? PRAYER_LABELS[nextKey] : "İmsak"} ${formatMinutes(times[nextKey ?? "imsak"])} · ${shortRemaining(remaining)} kaldı`
+              : "Vakitler hesaplanıyor…"}
+          </p>
+
+          <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-black/20">
+            <div
+              className="h-full rounded-full bg-gold transition-all duration-1000"
+              style={{ width: `${Math.round(progress * 100)}%` }}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-6 divide-x divide-border">
+        {PRAYER_ORDER.map((key) => {
+          const isNext = key === nextKey;
+          const isActive = key === activeKey;
+          return (
+            <div
+              key={key}
+              className={cn(
+                "px-1 py-2.5 text-center",
+                isNext && "bg-secondary",
+                isActive && !isNext && "bg-accent/50",
+              )}
+            >
+              <p
+                className={cn(
+                  "text-[10px] font-medium",
+                  isNext ? "text-primary" : "text-muted-foreground",
+                )}
+              >
+                {PRAYER_LABELS[key]}
+              </p>
+              <p
+                className={cn(
+                  "mt-0.5 text-[13px] font-semibold tabular-nums",
+                  isNext ? "text-primary" : "text-card-foreground",
+                )}
+              >
+                {ready ? formatMinutes(times[key]) : "--:--"}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+
+      <Link
+        to="/vakit"
+        className="flex items-center justify-center gap-1.5 border-t border-border py-2.5 text-xs font-semibold text-primary"
+      >
+        Tüm vakitler ve ezan hatırlatmaları <ChevronRight className="h-3.5 w-3.5" />
+      </Link>
+    </section>
+  );
+}
+
+function ContinueReading() {
+  const lastRead = useAppStore((s) => s.lastRead);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+  if (!mounted || !lastRead) return null;
+
+  const edition = EDITIONS[lastRead.mode];
+  return (
+    <Link
+      to="/oku"
+      className="mb-4 flex items-center gap-3 rounded-3xl border border-gold/50 bg-card p-3.5 shadow-soft transition-transform active:scale-[0.98]"
+    >
+      <span className="bg-emerald-gradient flex h-11 w-11 items-center justify-center rounded-2xl text-primary-foreground">
+        <BookOpen className="h-5 w-5" />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block text-sm font-semibold text-card-foreground">Okumaya devam et</span>
+        <span className="block truncate text-xs text-muted-foreground">
+          {edition.short} · {lastRead.index + 1}. sayfa / {edition.totalPages}
+        </span>
+        <span className="mt-1.5 block h-1 w-full overflow-hidden rounded-full bg-secondary">
+          <span
+            className="bg-emerald-gradient block h-full rounded-full"
+            style={{ width: `${Math.round(((lastRead.index + 1) / edition.totalPages) * 100)}%` }}
+          />
+        </span>
+      </span>
+      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+    </Link>
+  );
+}
+
 function HomePage() {
   const readDays = useAppStore((s) => s.readDays);
-  const counts = useAppStore((s) => s.counts);
-  const bookmarks = useAppStore((s) => s.bookmarks);
+  const halkaHistory = useAppStore((s) => s.halkaHistory);
   const [mounted, setMounted] = useState(false);
   const [todayLabel, setTodayLabel] = useState("");
   useEffect(() => {
@@ -89,118 +208,70 @@ function HomePage() {
   }, []);
 
   const streak = mounted ? currentStreak(readDays) : 0;
-  const totalDhikr = mounted ? Object.values(counts).reduce((a, b) => a + b, 0) : 0;
-  
+  const todayDhikr = mounted ? (halkaHistory[new Date().toISOString().slice(0, 10)] ?? 0) : 0;
 
   return (
     <AppShell>
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h1 className="font-display text-[26px] leading-tight text-gradient-emerald">
-            Namaz Vakti Delâilü'l-Hayrât
-          </h1>
-        </div>
+      <div className="mb-3 flex items-center justify-between">
+        <h1 className="font-display text-[22px] leading-tight text-gradient-emerald">
+          Namaz Vakti · Delâil
+        </h1>
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <button
-            aria-label="Bildirimler"
+          <Link
+            to="/vakit"
+            aria-label="Bildirim ayarları"
             className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-muted-foreground"
           >
-            <Bell className="h-[18px] w-[18px]" />
-          </button>
-          <button
-            aria-label="Ayarlar"
-            className="flex h-10 w-10 items-center justify-center rounded-full border border-border bg-card text-muted-foreground"
-          >
-            <Settings className="h-[18px] w-[18px]" />
-          </button>
+            <BellRing className="h-[18px] w-[18px]" />
+          </Link>
         </div>
       </div>
 
-      <section className="animate-rise mb-4 overflow-hidden rounded-[28px] border border-border bg-card shadow-soft">
-        <div className="bg-emerald-gradient relative px-5 py-4 text-primary-foreground">
-          <div className="pointer-events-none absolute inset-0 opacity-30 [background:radial-gradient(120%_100%_at_100%_0%,var(--gold),transparent_55%)]" />
-          <div className="relative flex items-center justify-between gap-3">
-            <p className="font-display text-base leading-6">
-              Gerçekten Allah ve melekleri Peygambere salât ederler. Ey iman edenler! Siz de ona teslimiyetle salât ve selâm edin. (Ahzâb Sûresi 56. Ayet)
-            </p>
-            <Sparkles className="h-5 w-5 shrink-0 text-gold" />
-          </div>
-        </div>
-        <div className="paper-surface px-5 py-5">
-          <p dir="rtl" className="font-arabic text-center text-[22px] leading-[2] text-ink">
-            {DUA_OF_DAY.arabic}
-          </p>
-          <p className="mt-3 text-center text-sm font-medium text-ink-soft">
-            {DUA_OF_DAY.translit}
-          </p>
-          <p className="mt-2 text-center text-xs text-ink-soft/80">{DUA_OF_DAY.meaning}</p>
-        </div>
-        <div className="flex items-center justify-between gap-2 px-4 py-3">
-          <Link
-            to="/oku"
-            className="bg-emerald-gradient flex-1 rounded-2xl px-4 py-3 text-center text-sm font-semibold text-primary-foreground shadow-soft transition-transform active:scale-[0.98]"
-          >
-            Delâilü'l-Hayrât Oku
-          </Link>
-          <Link
-            to="/zikir"
-            className="rounded-2xl border border-border px-4 py-3 text-sm font-semibold text-primary"
-          >
-            Salavât
-          </Link>
-        </div>
-      </section>
+      <PrayerHero />
+      <ContinueReading />
 
-
-      <section className="mb-5 grid grid-cols-3 gap-3">
+      <section className="mb-4 grid grid-cols-2 gap-3">
         <div className="rounded-3xl border border-border bg-card p-3 text-center shadow-soft">
           <Flame className="mx-auto h-4 w-4 text-gold" />
           <p className="mt-1 font-display text-xl text-card-foreground">{streak}</p>
-          <p className="text-[10px] text-muted-foreground">Günlük seri</p>
+          <p className="text-[10px] text-muted-foreground">Günlük okuma serisi</p>
         </div>
         <div className="rounded-3xl border border-border bg-card p-3 text-center shadow-soft">
-          <Loop className="mx-auto h-4 w-4 text-primary" />
-          <p className="mt-1 font-display text-xl text-card-foreground">{totalDhikr}</p>
-          <p className="text-[10px] text-muted-foreground">Toplam zikir</p>
-        </div>
-        <div className="rounded-3xl border border-border bg-card p-3 text-center shadow-soft">
-          <BookOpen className="mx-auto h-4 w-4 text-primary" />
-          <p className="mt-1 font-display text-xl text-card-foreground">
-            {mounted ? bookmarks.length : 0}
-          </p>
-          <p className="text-[10px] text-muted-foreground">Yer imi</p>
+          <Sparkles className="mx-auto h-4 w-4 text-primary" />
+          <p className="mt-1 font-display text-xl text-card-foreground">{todayDhikr}</p>
+          <p className="text-[10px] text-muted-foreground">Bugünkü zikir</p>
         </div>
       </section>
 
       <section className="space-y-3">
-        <h2 className="px-1 text-sm font-semibold text-foreground">Hızlı erişim</h2>
-        <QuickCard
-          to="/vakit"
-          icon={Clock}
-          title="Namaz Vakitleri"
-          desc="Konumuna göre günlük vakitler"
-        />
         <QuickCard
           to="/oku"
           icon={BookOpen}
           title="Delâilü'l-Hayrât Oku"
           desc={`Latince · Arapça · Türkçe — ${EDITIONS.arabic.totalPages} sayfa`}
         />
+        <QuickCard to="/halka" icon={Sparkles} title="Zikir Halkası" desc="Günlük hedef ve ilerleme" />
         <QuickCard
           to="/esma"
           icon={Sparkles}
           title="Esmâü'l-Hüsnâ"
-          desc="Allah'ın 99 ismi, anlamı ve zikri"
+          desc="99 isim · arama ve favoriler"
         />
         <QuickCard to="/kible" icon={Compass} title="Kıble Pusulası" desc="Kâbe yönünü bul" />
+        <QuickCard to="/vakit" icon={Clock} title="Namaz Vakitleri" desc="Ezan alarmları ve takip" />
       </section>
 
-      <p className="mt-6 text-center text-[11px] text-muted-foreground">
-        {todayLabel}
-      </p>
-      <SupportForm />
+      <section className="paper-surface mt-5 rounded-[28px] border border-border px-5 py-5 shadow-soft">
+        <p dir="rtl" className="font-arabic text-center text-[20px] leading-[2] text-ink">
+          {DUA_OF_DAY.arabic}
+        </p>
+        <p className="mt-2 text-center text-sm font-medium text-ink-soft">{DUA_OF_DAY.translit}</p>
+        <p className="mt-1 text-center text-xs text-ink-soft/80">{DUA_OF_DAY.meaning}</p>
+      </section>
 
+      <p className="mt-6 text-center text-[11px] text-muted-foreground">{todayLabel}</p>
+      <SupportForm />
     </AppShell>
   );
 }

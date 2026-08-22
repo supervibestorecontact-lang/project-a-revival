@@ -1,9 +1,10 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Minus, Plus, RotateCcw, Search, Sparkles, X } from "lucide-react";
-import { useMemo, useState } from "react";
+import { Heart, Minus, Plus, RotateCcw, Search, Sparkles, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { AppShell, ScreenHeader } from "@/components/app-shell";
 import { ESMA_UL_HUSNA, type EsmaName } from "@/lib/esma";
 import { cn } from "@/lib/utils";
+import { useAppStore } from "@/store/app-store";
 
 export const Route = createFileRoute("/esma")({
   head: () => ({
@@ -40,14 +41,25 @@ function EsmaPage() {
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState<EsmaName | null>(null);
   const [count, setCount] = useState(0);
+  const [onlyFavs, setOnlyFavs] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  const favorites = useAppStore((s) => s.esmaFavorites);
+  const toggleFavorite = useAppStore((s) => s.toggleEsmaFavorite);
+  const favSet = useMemo(() => new Set(mounted ? favorites : []), [favorites, mounted]);
 
   const list = useMemo(() => {
     const q = normalize(query);
-    if (!q) return ESMA_UL_HUSNA;
-    return ESMA_UL_HUSNA.filter(
-      (n) => normalize(n.translit).includes(q) || normalize(n.meaning).includes(q),
+    const base = onlyFavs ? ESMA_UL_HUSNA.filter((n) => favSet.has(n.no)) : ESMA_UL_HUSNA;
+    if (!q) return base;
+    return base.filter(
+      (n) =>
+        normalize(n.translit).includes(q) ||
+        normalize(n.meaning).includes(q) ||
+        String(n.no) === q,
     );
-  }, [query]);
+  }, [query, onlyFavs, favSet]);
 
   const open = (name: EsmaName) => {
     setSelected(name);
@@ -86,13 +98,36 @@ function EsmaPage() {
         ) : null}
       </div>
 
+      <div className="mb-4 flex gap-2">
+        <button
+          type="button"
+          onClick={() => setOnlyFavs(false)}
+          className={cn(
+            "flex-1 rounded-2xl border px-3 py-2 text-xs font-semibold transition-colors",
+            !onlyFavs ? "bg-emerald-gradient border-transparent text-primary-foreground" : "border-border text-muted-foreground",
+          )}
+        >
+          Tümü (99)
+        </button>
+        <button
+          type="button"
+          onClick={() => setOnlyFavs(true)}
+          className={cn(
+            "flex-1 rounded-2xl border px-3 py-2 text-xs font-semibold transition-colors",
+            onlyFavs ? "bg-emerald-gradient border-transparent text-primary-foreground" : "border-border text-muted-foreground",
+          )}
+        >
+          Favorilerim ({mounted ? favorites.length : 0})
+        </button>
+      </div>
+
       <ul className="space-y-2.5">
         {list.map((name) => (
-          <li key={name.no}>
+          <li key={name.no} className="relative">
             <button
               type="button"
               onClick={() => open(name)}
-              className="flex w-full items-center gap-3 rounded-3xl border border-border bg-card p-3.5 text-left shadow-soft transition-transform active:scale-[0.98]"
+              className="flex w-full items-center gap-3 rounded-3xl border border-border bg-card p-3.5 pr-12 text-left shadow-soft transition-transform active:scale-[0.98]"
             >
               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-accent text-xs font-semibold text-accent-foreground">
                 {name.no}
@@ -107,11 +142,25 @@ function EsmaPage() {
                 {name.arabic}
               </span>
             </button>
+            <button
+              type="button"
+              onClick={() => toggleFavorite(name.no)}
+              aria-label={`${name.translit} favorilere ekle`}
+              aria-pressed={favSet.has(name.no)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-2"
+            >
+              <Heart
+                className={cn(
+                  "h-4 w-4",
+                  favSet.has(name.no) ? "fill-gold text-gold" : "text-muted-foreground",
+                )}
+              />
+            </button>
           </li>
         ))}
         {list.length === 0 ? (
           <li className="rounded-3xl border border-dashed border-border p-6 text-center text-sm text-muted-foreground">
-            Aramanıza uygun isim bulunamadı.
+            {onlyFavs ? "Henüz favori isim eklemediniz." : "Aramanıza uygun isim bulunamadı."}
           </li>
         ) : null}
       </ul>
@@ -130,14 +179,26 @@ function EsmaPage() {
                 <p className="text-xs text-muted-foreground">{selected.no}. isim</p>
                 <h2 className="font-display text-xl text-gradient-emerald">{selected.translit}</h2>
               </div>
-              <button
-                type="button"
-                onClick={() => setSelected(null)}
-                aria-label="Kapat"
-                className="rounded-full bg-accent p-2 text-accent-foreground"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => toggleFavorite(selected.no)}
+                  aria-label="Favorilere ekle"
+                  className="rounded-full bg-accent p-2 text-accent-foreground"
+                >
+                  <Heart
+                    className={cn("h-4 w-4", favSet.has(selected.no) && "fill-gold text-gold")}
+                  />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelected(null)}
+                  aria-label="Kapat"
+                  className="rounded-full bg-accent p-2 text-accent-foreground"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             </div>
 
             <p className="font-arabic mb-3 text-center text-3xl leading-relaxed text-primary" dir="rtl">
