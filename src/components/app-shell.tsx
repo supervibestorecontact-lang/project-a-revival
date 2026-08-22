@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { useEffect, type ReactNode } from "react";
 import { useAppStore } from "@/store/app-store";
+import { useAlarmRunner } from "@/lib/use-alarm-runner";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 
