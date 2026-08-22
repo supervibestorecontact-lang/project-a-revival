@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, Minus, Plus, RotateCcw, Sparkles, Target } from "lucide-react";
+import { CalendarDays, Check, Minus, Plus, RotateCcw, Sparkles, Target } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { AppShell, ScreenHeader } from "@/components/app-shell";
 import { HALKA_INTRO, HALKA_STEPS } from "@/lib/halka";
@@ -41,6 +41,24 @@ function HalkaPage() {
   const addHalka = useAppStore((s) => s.addHalka);
   const resetHalka = useAppStore((s) => s.resetHalka);
   const haptics = useAppStore((s) => s.haptics);
+  const goal = useAppStore((s) => s.halkaGoal);
+  const setGoal = useAppStore((s) => s.setHalkaGoal);
+  const history = useAppStore((s) => s.halkaHistory);
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const todayTotal = mounted ? (history[todayKey] ?? 0) : 0;
+  const goalRatio = Math.min(1, goal > 0 ? todayTotal / goal : 0);
+  const last7 = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date();
+    d.setDate(d.getDate() - (6 - i));
+    const key = d.toISOString().slice(0, 10);
+    return {
+      key,
+      label: d.toLocaleDateString("tr-TR", { weekday: "short" }),
+      value: mounted ? (history[key] ?? 0) : 0,
+    };
+  });
+  const weekMax = Math.max(goal, ...last7.map((d) => d.value), 1);
+  const weekTotal = last7.reduce((a, d) => a + d.value, 0);
 
   const idx = Math.min(stepIndex, steps.length - 1);
   const step = steps[idx]!;
@@ -78,6 +96,70 @@ function HalkaPage() {
         </div>
       </section>
 
+
+      <section className="mb-4 rounded-[28px] border border-border bg-card p-4 shadow-soft">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <span className="bg-emerald-gradient flex h-9 w-9 items-center justify-center rounded-2xl text-primary-foreground">
+              <Target className="h-4 w-4" />
+            </span>
+            <div>
+              <p className="text-sm font-semibold text-card-foreground">Günlük hedef</p>
+              <p className="text-[11px] text-muted-foreground">
+                Bugün {todayTotal} / {goal} zikir
+              </p>
+            </div>
+          </div>
+          <p className="font-display text-2xl tabular-nums text-primary">
+            %{Math.round(goalRatio * 100)}
+          </p>
+        </div>
+        <div className="h-2 w-full overflow-hidden rounded-full bg-secondary">
+          <div
+            className="bg-emerald-gradient h-full rounded-full transition-all duration-500"
+            style={{ width: `${goalRatio * 100}%` }}
+          />
+        </div>
+        <div className="mt-3 flex gap-2">
+          {[100, 300, 500, 1000].map((g) => (
+            <button
+              key={g}
+              onClick={() => setGoal(g)}
+              className={cn(
+                "flex-1 rounded-xl border px-2 py-1.5 text-[11px] font-semibold transition-colors",
+                goal === g ? "border-gold/70 bg-secondary text-primary" : "border-border text-muted-foreground",
+              )}
+            >
+              {g}
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="mb-5 rounded-[28px] border border-border bg-card p-4 shadow-soft">
+        <div className="mb-3 flex items-center gap-2">
+          <CalendarDays className="h-4 w-4 text-primary" />
+          <p className="text-sm font-semibold text-card-foreground">Son 7 gün</p>
+          <span className="ml-auto text-[11px] text-muted-foreground">toplam {weekTotal}</span>
+        </div>
+        <div className="flex h-24 items-end justify-between gap-1.5">
+          {last7.map((d) => (
+            <div key={d.key} className="flex flex-1 flex-col items-center gap-1">
+              <span className="text-[10px] tabular-nums text-muted-foreground">
+                {d.value > 0 ? d.value : ""}
+              </span>
+              <div
+                className={cn(
+                  "w-full rounded-t-lg transition-all",
+                  d.value >= goal ? "bg-gold" : "bg-emerald-gradient",
+                )}
+                style={{ height: `${Math.max(4, (d.value / weekMax) * 64)}px` }}
+              />
+              <span className="text-[10px] text-muted-foreground">{d.label}</span>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <div className="mb-5">
         <div className="grid grid-cols-4 gap-2">
