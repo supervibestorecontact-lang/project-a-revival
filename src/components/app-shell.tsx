@@ -70,6 +70,7 @@ export function BottomNav() {
 }
 
 export function AppShell({ children, className }: { children: ReactNode; className?: string }) {
+  useAlarmRunner();
   return (
     <div className="min-h-screen bg-background">
       <StoreHydration />
