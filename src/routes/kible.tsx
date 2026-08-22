@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Compass, LocateFixed, TriangleAlert } from "lucide-react";
+import { Compass, Info, LocateFixed, RefreshCw, TriangleAlert } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { AppShell, ScreenHeader } from "@/components/app-shell";
 
@@ -50,6 +50,16 @@ function QiblaPage() {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sensorOn, setSensorOn] = useState(false);
+  const [sensorSupported, setSensorSupported] = useState(true);
+  const [noSignal, setNoSignal] = useState(false);
+  const [accuracy, setAccuracy] = useState<number | null>(null);
+  const [showCalibration, setShowCalibration] = useState(false);
+
+  useEffect(() => {
+    if (typeof window !== "undefined" && !("DeviceOrientationEvent" in window)) {
+      setSensorSupported(false);
+    }
+  }, []);
 
   const bearing = coords ? qiblaBearing(coords.lat, coords.lng) : null;
   const relative = bearing !== null && heading !== null ? (bearing - heading + 360) % 360 : bearing;
@@ -66,7 +76,17 @@ function QiblaPage() {
         setCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         setError(null);
       },
-      () => setError("Konum izni verilmedi. Kıble yönü için konuma ihtiyaç var."),
+      (err) => {
+        if (err.code === err.PERMISSION_DENIED) {
+          setError(
+            "Konum izni reddedildi. Kıble yönü için tarayıcı/telefon ayarlarından bu uygulamaya konum izni verin.",
+          );
+        } else if (err.code === err.POSITION_UNAVAILABLE) {
+          setError("Konum alınamadı. Konum servisini (GPS) açıp açık alanda tekrar deneyin.");
+        } else {
+          setError("Konum isteği zaman aşımına uğradı. 'Konumu Yenile' ile tekrar deneyin.");
+        }
+      },
       { enableHighAccuracy: true, timeout: 10000 },
     );
   }, []);
@@ -77,13 +97,17 @@ function QiblaPage() {
       if (AnyEvent && typeof AnyEvent.requestPermission === "function") {
         const res = await AnyEvent.requestPermission();
         if (res !== "granted") {
-          setError("Pusula sensörü izni reddedildi.");
+          setError(
+            "Pusula sensörü izni reddedildi. Ayarlar → Safari/Tarayıcı → Hareket ve Yön Erişimi'ni açın.",
+          );
           return;
         }
       }
       setSensorOn(true);
+      setError(null);
+      setShowCalibration(true);
     } catch {
-      setError("Pusula sensörü başlatılamadı.");
+      setError("Pusula sensörü başlatılamadı. Cihazınız manyetik pusula içermiyor olabilir.");
     }
   }, []);
 
@@ -93,17 +117,25 @@ function QiblaPage() {
 
   useEffect(() => {
     if (!sensorOn) return;
+    const timeout = setTimeout(() => setNoSignal(true), 3000);
     const handler = (e: DeviceOrientationEvent) => {
       const webkit = (e as any).webkitCompassHeading;
+      const acc = (e as any).webkitCompassAccuracy;
+      if (typeof acc === "number") setAccuracy(acc);
       if (typeof webkit === "number") {
         setHeading(webkit);
+        setNoSignal(false);
+        clearTimeout(timeout);
       } else if (typeof e.alpha === "number") {
         setHeading((360 - e.alpha) % 360);
+        setNoSignal(false);
+        clearTimeout(timeout);
       }
     };
     window.addEventListener("deviceorientationabsolute", handler as EventListener, true);
     window.addEventListener("deviceorientation", handler as EventListener, true);
     return () => {
+      clearTimeout(timeout);
       window.removeEventListener("deviceorientationabsolute", handler as EventListener, true);
       window.removeEventListener("deviceorientation", handler as EventListener, true);
     };
@@ -191,8 +223,50 @@ function QiblaPage() {
         </p>
       </div>
 
+      {showCalibration ? (
+        <div className="mb-4 rounded-3xl border border-gold/50 bg-card p-4 text-xs text-muted-foreground shadow-soft">
+          <p className="mb-1 flex items-center gap-2 text-sm font-semibold text-card-foreground">
+            <Info className="h-4 w-4 text-gold" /> Pusula kalibrasyonu
+          </p>
+          <p>
+            Telefonu elinizde havada <b>8 rakamı</b> çizer gibi 3-4 kez çevirin. Metal masa, hoparlör,
+            telefon kılıfındaki mıknatıs ve şarj kablosu pusulayı şaşırtır.
+          </p>
+          <button
+            onClick={() => setShowCalibration(false)}
+            className="mt-2 rounded-xl border border-border px-3 py-1.5 text-[11px] font-semibold text-primary"
+          >
+            Anladım
+          </button>
+        </div>
+      ) : null}
+
+      {sensorOn && noSignal ? (
+        <p className="mb-4 flex items-start gap-2 rounded-2xl bg-destructive/10 px-4 py-3 text-xs text-destructive">
+          <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+          Pusula verisi alınamıyor. Cihazınızda manyetik sensör olmayabilir veya tarayıcı sensör
+          erişimini kısıtlıyor. Kıble açısını ({bearing !== null ? Math.round(bearing) : "—"}°) harici bir
+          pusulayla da kullanabilirsiniz.
+        </p>
+      ) : null}
+
+      {accuracy !== null && accuracy > 15 ? (
+        <p className="mb-4 flex items-start gap-2 rounded-2xl bg-secondary px-4 py-3 text-xs text-secondary-foreground">
+          <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+          Pusula hassasiyeti düşük (±{Math.round(accuracy)}°). Kalibrasyon için telefonu 8 şeklinde
+          çevirin.
+        </p>
+      ) : null}
+
+      {!sensorSupported ? (
+        <p className="mb-4 flex items-start gap-2 rounded-2xl bg-secondary px-4 py-3 text-xs text-secondary-foreground">
+          <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+          Cihazınız yön sensörünü desteklemiyor; yalnızca kıble açısı gösterilir.
+        </p>
+      ) : null}
+
       <div className="space-y-2">
-        {!sensorOn ? (
+        {!sensorOn && sensorSupported ? (
           <button
             onClick={enableSensors}
             className="bg-emerald-gradient flex w-full items-center justify-center gap-2 rounded-2xl py-3 text-sm font-semibold text-primary-foreground"
@@ -205,6 +279,12 @@ function QiblaPage() {
           className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-card py-3 text-sm font-semibold"
         >
           <LocateFixed className="h-4 w-4 text-primary" /> Konumu Yenile
+        </button>
+        <button
+          onClick={() => setShowCalibration(true)}
+          className="flex w-full items-center justify-center gap-2 rounded-2xl border border-border bg-card py-3 text-sm font-semibold"
+        >
+          <RefreshCw className="h-4 w-4 text-primary" /> Pusulayı Kalibre Et
         </button>
       </div>
 
