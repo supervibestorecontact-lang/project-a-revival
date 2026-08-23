@@ -47,11 +47,6 @@ export const Route = createFileRoute("/")({
   component: HomePage,
 });
 
-const DUA_OF_DAY = {
-  arabic: "اَللّٰهُمَّ صَلِّ عَلٰى سَيِّدِنَا مُحَمَّدٍ وَعَلٰى اٰلِهِ وَصَحْبِهِ وَسَلِّمْ",
-  translit: "Allâhümme salli alâ seyyidinâ Muhammedin ve alâ âlihî ve sahbihî ve sellim",
-  meaning: "Allah'ım! Efendimiz Muhammed'e, âline ve ashâbına salât ve selâm eyle.",
-};
 
 function QuickCard({
   to,
@@ -262,13 +257,6 @@ function HomePage() {
         <QuickCard to="/vakit" icon={Clock} title="Namaz Vakitleri" desc="Ezan alarmları ve takip" />
       </section>
 
-      <section className="paper-surface mt-5 rounded-[28px] border border-border px-5 py-5 shadow-soft">
-        <p dir="rtl" className="font-arabic text-center text-[20px] leading-[2] text-ink">
-          {DUA_OF_DAY.arabic}
-        </p>
-        <p className="mt-2 text-center text-sm font-medium text-ink-soft">{DUA_OF_DAY.translit}</p>
-        <p className="mt-1 text-center text-xs text-ink-soft/80">{DUA_OF_DAY.meaning}</p>
-      </section>
 
       <p className="mt-6 text-center text-[11px] text-muted-foreground">{todayLabel}</p>
       <SupportForm />
