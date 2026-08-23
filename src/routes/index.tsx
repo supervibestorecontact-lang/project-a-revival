@@ -47,11 +47,6 @@ export const Route = createFileRoute("/")({
   component: HomePage,
 });
 
-const DUA_OF_DAY = {
-  arabic: "اَللّٰهُمَّ صَلِّ عَلٰى سَيِّدِنَا مُحَمَّدٍ وَعَلٰى اٰلِهِ وَصَحْبِهِ وَسَلِّمْ",
-  translit: "Allâhümme salli alâ seyyidinâ Muhammedin ve alâ âlihî ve sahbihî ve sellim",
-  meaning: "Allah'ım! Efendimiz Muhammed'e, âline ve ashâbına salât ve selâm eyle.",
-};
 
 function QuickCard({
   to,
