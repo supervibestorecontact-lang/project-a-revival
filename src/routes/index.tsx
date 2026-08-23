@@ -132,7 +132,7 @@ function PrayerHero() {
             <MapPin className="h-3.5 w-3.5" />
             {clock.place ?? (clock.located ? "Konumunuz" : "İstanbul")}
           </span>
-          <span className="opacity-90">
+          <span className="inline-flex items-center gap-1 rounded-full bg-black/25 px-3 py-1 opacity-90 backdrop-blur-sm">
             Şu an: <b className="font-semibold text-gold">{activeKey ? PRAYER_LABELS[activeKey] : "—"}</b> vakti
           </span>
         </div>
