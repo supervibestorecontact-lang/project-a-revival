@@ -4,13 +4,20 @@ import {
   BellRing,
   ChevronRight,
   Clock,
+  CloudSun,
   Compass,
   Flame,
   Mail,
   MapPin,
+  MoonStar,
   Send,
   Sparkles,
+  Sun,
+  SunMedium,
+  Sunrise,
+  Sunset,
 } from "lucide-react";
+import heroSunset from "@/assets/hero-sunset.jpg";
 
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
@@ -25,6 +32,16 @@ import {
   usePrayerClock,
 } from "@/lib/prayer-clock";
 import { cn } from "@/lib/utils";
+import type { PrayerKey } from "@/lib/prayer-times";
+
+const PRAYER_ICONS: Record<PrayerKey, typeof BookOpen> = {
+  imsak: Sunrise,
+  gunes: Sun,
+  ogle: SunMedium,
+  ikindi: CloudSun,
+  aksam: Sunset,
+  yatsi: MoonStar,
+};
 
 export const Route = createFileRoute("/")({
   head: () => ({
