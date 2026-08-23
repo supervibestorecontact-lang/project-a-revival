@@ -17,7 +17,29 @@ import {
   Sunrise,
   Sunset,
 } from "lucide-react";
-import heroSunset from "@/assets/hero-sunset.jpg";
+import heroSunriseSea from "@/assets/hero-sunrise-sea.jpg";
+import heroSunsetIstanbul from "@/assets/hero-sunset-istanbul.jpg";
+import heroNightIstanbul from "@/assets/hero-night-istanbul.jpg";
+
+/** Arka planı bulunduğu vakte göre seçer:
+ *  imsak/güneş → denizde güneş doğuşu
+ *  öğle/ikindi → İstanbul'da gün batımı
+ *  akşam/yatsı → İstanbul'da gece
+ */
+function heroBgFor(activeKey: PrayerKey | null): string {
+  switch (activeKey) {
+    case "imsak":
+    case "gunes":
+      return heroSunriseSea;
+    case "ogle":
+    case "ikindi":
+      return heroSunsetIstanbul;
+    case "aksam":
+    case "yatsi":
+    default:
+      return heroNightIstanbul;
+  }
+}
 
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
