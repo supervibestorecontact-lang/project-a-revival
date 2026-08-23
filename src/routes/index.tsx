@@ -138,13 +138,13 @@ function PrayerHero() {
       {/* Full-bleed photographic background with dark overlay for text readability */}
       <div className="absolute inset-0">
         <img
-          src={heroSunset}
+          src={heroBgFor(activeKey)}
           alt=""
-          className="h-full w-full object-cover"
+          className="h-full w-full object-cover transition-opacity duration-700"
           width={1024}
           height={1280}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/30 to-black/70" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/70" />
       </div>
 
       <div className="relative px-5 pb-4 pt-4 text-white">
