@@ -17,7 +17,29 @@ import {
   Sunrise,
   Sunset,
 } from "lucide-react";
-import heroSunset from "@/assets/hero-sunset.jpg";
+import heroSunriseSea from "@/assets/hero-sunrise-sea.jpg";
+import heroSunsetIstanbul from "@/assets/hero-sunset-istanbul.jpg";
+import heroNightIstanbul from "@/assets/hero-night-istanbul.jpg";
+
+/** Arka planı bulunduğu vakte göre seçer:
+ *  imsak/güneş → denizde güneş doğuşu
+ *  öğle/ikindi → İstanbul'da gün batımı
+ *  akşam/yatsı → İstanbul'da gece
+ */
+function heroBgFor(activeKey: PrayerKey | null): string {
+  switch (activeKey) {
+    case "imsak":
+    case "gunes":
+      return heroSunriseSea;
+    case "ogle":
+    case "ikindi":
+      return heroSunsetIstanbul;
+    case "aksam":
+    case "yatsi":
+    default:
+      return heroNightIstanbul;
+  }
+}
 
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
@@ -116,13 +138,13 @@ function PrayerHero() {
       {/* Full-bleed photographic background with dark overlay for text readability */}
       <div className="absolute inset-0">
         <img
-          src={heroSunset}
+          src={heroBgFor(activeKey)}
           alt=""
-          className="h-full w-full object-cover"
+          className="h-full w-full object-cover transition-opacity duration-700"
           width={1024}
           height={1280}
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/35 via-black/30 to-black/70" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/30 to-black/70" />
       </div>
 
       <div className="relative px-5 pb-4 pt-4 text-white">
