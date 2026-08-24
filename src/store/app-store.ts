@@ -105,6 +105,7 @@ type State = {
   lastReadAt: number | null;
 
   alarms: Record<string, { enabled: boolean; leads: number[] }>;
+  lockCountdown: boolean;
 
   salahLog: Record<string, Record<string, "done" | "missed">>;
 };
@@ -139,6 +140,7 @@ type Actions = {
   toggleAlarm: (key: string) => void;
   toggleAlarmLead: (key: string, lead: number) => void;
   setAllAlarms: (enabled: boolean) => void;
+  setLockCountdown: (v: boolean) => void;
 
   setSalah: (prayer: string, status: "done" | "missed") => void;
 };
@@ -177,6 +179,7 @@ export const useAppStore = create<State & Actions>()(
       lastReadAt: null,
 
       alarms: {},
+      lockCountdown: false,
 
       salahLog: {},
 
@@ -275,6 +278,8 @@ export const useAppStore = create<State & Actions>()(
           halkaTargets: { ...s.halkaTargets, [stepId]: 100 },
         })),
       setHalkaStep: (halkaStep) => set({ halkaStep }),
+      setLockCountdown: (v) => set({ lockCountdown: v }),
+
       setHalkaGoal: (n) => set({ halkaGoal: Math.max(10, Math.round(n)) }),
 
       toggleEsmaFavorite: (no) =>
@@ -359,6 +364,7 @@ export const useAppStore = create<State & Actions>()(
           halkaGoal: (state["halkaGoal"] as number) ?? 500,
           halkaHistory: (state["halkaHistory"] as Record<string, number>) ?? {},
           lastRead: (state["lastRead"] as unknown) ?? null,
+          lockCountdown: (state["lockCountdown"] as boolean) ?? false,
         };
       },
       skipHydration: true,

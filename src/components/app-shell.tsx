@@ -10,6 +10,7 @@ import {
 import { useEffect, type ReactNode } from "react";
 import { useAppStore } from "@/store/app-store";
 import { useAlarmRunner } from "@/lib/use-alarm-runner";
+import { useLockCountdown } from "@/lib/use-lock-countdown";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { cn } from "@/lib/utils";
 
@@ -72,6 +73,7 @@ export function BottomNav() {
 
 export function AppShell({ children, className }: { children: ReactNode; className?: string }) {
   useAlarmRunner();
+  useLockCountdown();
   return (
     <div className="min-h-screen bg-background">
       <StoreHydration />
