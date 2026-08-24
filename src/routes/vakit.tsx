@@ -74,6 +74,9 @@ function PrayerTimesPage() {
   const toggleAlarm = useAppStore((s) => s.toggleAlarm);
   const toggleAlarmLead = useAppStore((s) => s.toggleAlarmLead);
   const setAllAlarms = useAppStore((s) => s.setAllAlarms);
+  const lockCountdownRaw = useAppStore((s) => s.lockCountdown);
+  const setLockCountdown = useAppStore((s) => s.setLockCountdown);
+
 
   const [permission, setPermission] = useState<NotifyState>("default");
   const [testMsg, setTestMsg] = useState<string | null>(null);
