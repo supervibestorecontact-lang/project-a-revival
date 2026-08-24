@@ -94,6 +94,8 @@ function PrayerTimesPage() {
     setPermission(await requestNotifyPermission());
   }, []);
 
+  const lockCountdown = mounted && lockCountdownRaw;
+
   const runTest = useCallback(async () => {
     const res = await sendTestNotification();
     setPermission(notifyState());
