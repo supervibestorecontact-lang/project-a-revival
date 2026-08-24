@@ -13,7 +13,7 @@ export type OngoingPayload = {
   at: string;
   /** Sonraki vaktin epoch ms değeri — servis çalışanı bunu kullanarak kendi hesaplar */
   ts: number;
-  place?: string;
+  place?: string | undefined;
   /** Sonraki 24 saatin vakitleri: [{label, ts}] */
   upcoming?: { label: string; ts: number }[];
 };
