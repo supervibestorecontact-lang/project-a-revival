@@ -288,6 +288,42 @@ function PrayerTimesPage() {
           </button>
         </div>
 
+        {/* Kilit ekranı geri sayımı */}
+        <button
+          onClick={() => {
+            if (!lockCountdown && permission !== "granted") {
+              void enableNotifications();
+            }
+            setLockCountdown(!lockCountdown);
+          }}
+          className="mb-3 flex w-full items-start gap-3 rounded-2xl border border-border px-3 py-3 text-left"
+          aria-pressed={lockCountdown}
+        >
+          <span className="flex-1">
+            <span className="block text-sm font-semibold text-card-foreground">
+              Kilit ekranında kalan süre
+            </span>
+            <span className="mt-0.5 block text-[11px] text-muted-foreground">
+              Uygulama kapalıyken bile tek, sessiz bir bildirimde sonraki namaza kalan süre görünür.
+              Titreşim ve ses yoktur, pili yormaz.
+            </span>
+          </span>
+          <span
+            className={cn(
+              "mt-0.5 h-6 w-11 shrink-0 rounded-full p-0.5 transition-colors",
+              lockCountdown ? "bg-emerald-gradient" : "bg-secondary",
+            )}
+          >
+            <span
+              className={cn(
+                "block h-5 w-5 rounded-full bg-background transition-transform",
+                lockCountdown && "translate-x-5",
+              )}
+            />
+          </span>
+        </button>
+
+
         {testMsg ? (
           <p className="mb-3 rounded-2xl bg-secondary px-3 py-2.5 text-[11px] text-secondary-foreground">
             {testMsg}
