@@ -4,19 +4,18 @@ import {
   CheckCheck,
   Clock,
   LocateFixed,
-  MapPin,
   ShieldCheck,
   TriangleAlert,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { AppShell, ScreenHeader } from "@/components/app-shell";
+import { PrayerHero } from "@/components/prayer-hero";
 import { useAppStore } from "@/store/app-store";
 import { cn } from "@/lib/utils";
 import {
   formatMinutes,
   PRAYER_LABELS,
   PRAYER_ORDER,
-  shortRemaining,
   usePrayerClock,
 } from "@/lib/prayer-clock";
 import {
@@ -62,7 +61,7 @@ const leadLabel = (lead: number) =>
 
 function PrayerTimesPage() {
   const clock = usePrayerClock();
-  const { times, nextKey, activeKey, remaining, remainingLabel, ready } = clock;
+  const { times, nextKey, activeKey, ready } = clock;
 
   const salahLog = useAppStore((s) => s.salahLog);
   const setSalah = useAppStore((s) => s.setSalah);
