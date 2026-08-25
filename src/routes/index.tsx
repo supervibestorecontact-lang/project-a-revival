@@ -4,66 +4,20 @@ import {
   BellRing,
   ChevronRight,
   Clock,
-  CloudSun,
   Compass,
   Flame,
   Mail,
-  MapPin,
-  MoonStar,
   Send,
   Sparkles,
-  Sun,
-  SunMedium,
-  Sunrise,
-  Sunset,
 } from "lucide-react";
-import heroSunriseSea from "@/assets/hero-sunrise-sea.jpg";
-import heroSunsetIstanbul from "@/assets/hero-sunset-istanbul.jpg";
-import heroNightIstanbul from "@/assets/hero-night-istanbul.jpg";
-
-/** Arka planı bulunduğu vakte göre seçer:
- *  imsak/güneş → denizde güneş doğuşu
- *  öğle/ikindi → İstanbul'da gün batımı
- *  akşam/yatsı → İstanbul'da gece
- */
-function heroBgFor(activeKey: PrayerKey | null): string {
-  switch (activeKey) {
-    case "imsak":
-    case "gunes":
-      return heroSunriseSea;
-    case "ogle":
-    case "ikindi":
-      return heroSunsetIstanbul;
-    case "aksam":
-    case "yatsi":
-    default:
-      return heroNightIstanbul;
-  }
-}
 
 import { useEffect, useState } from "react";
 import { AppShell } from "@/components/app-shell";
+import { PrayerHero } from "@/components/prayer-hero";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { EDITIONS } from "@/lib/books";
 import { currentStreak, useAppStore } from "@/store/app-store";
-import {
-  formatMinutes,
-  PRAYER_LABELS,
-  PRAYER_ORDER,
-  shortRemaining,
-  usePrayerClock,
-} from "@/lib/prayer-clock";
-import { cn } from "@/lib/utils";
-import type { PrayerKey } from "@/lib/prayer-times";
 
-const PRAYER_ICONS: Record<PrayerKey, typeof BookOpen> = {
-  imsak: Sunrise,
-  gunes: Sun,
-  ogle: SunMedium,
-  ikindi: CloudSun,
-  aksam: Sunset,
-  yatsi: MoonStar,
-};
 
 export const Route = createFileRoute("/")({
   head: () => ({
