@@ -111,30 +111,8 @@ function PrayerTimesPage() {
     <AppShell>
       <ScreenHeader title="Namaz Vakitleri" subtitle="Konumunuza göre günlük vakitler" />
 
-      <section className="animate-rise mb-5 overflow-hidden rounded-[28px] border border-border bg-card shadow-soft">
-        <div className="bg-emerald-gradient relative px-5 py-5 text-primary-foreground">
-          <div className="pointer-events-none absolute inset-0 opacity-30 [background:radial-gradient(120%_100%_at_100%_0%,var(--gold),transparent_55%)]" />
-          <div className="relative text-center">
-            <p className="text-[11px] uppercase tracking-[0.2em] opacity-80">
-              Şu an {activeKey ? PRAYER_LABELS[activeKey] : "—"} vakti · sıradaki
-            </p>
-            <p className="font-display mt-1 text-2xl">
-              {nextKey ? PRAYER_LABELS[nextKey] : ready ? "İmsak" : "—"}
-            </p>
-            <p className="mt-2 font-display text-4xl tabular-nums text-gold">
-              {ready ? remainingLabel : "--:--:--"}
-            </p>
-            <p className="mt-1 text-xs opacity-85">{ready ? `${shortRemaining(remaining)} kaldı` : ""}</p>
-            <p className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-black/15 px-3 py-1 text-xs font-medium">
-              <MapPin className="h-3.5 w-3.5" />
-              {clock.place ?? (clock.located ? "Konumunuz" : "İstanbul (varsayılan)")}
-            </p>
-            <p className="mt-1 text-xs opacity-80">
-              {clock.now ? clock.now.toLocaleDateString("tr-TR", { dateStyle: "long" }) : "Yükleniyor…"}
-            </p>
-          </div>
-        </div>
-      </section>
+      <PrayerHero showAllLink={false} />
+
 
       <section className="space-y-2">
         {PRAYER_ORDER.map((key) => {
