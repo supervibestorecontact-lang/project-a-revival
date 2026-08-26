@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as CamilerRouteImport } from './routes/camiler'
 import { Route as EsmaRouteImport } from './routes/esma'
 import { Route as HalkaRouteImport } from './routes/halka'
 import { Route as KibleRouteImport } from './routes/kible'
@@ -20,6 +21,11 @@ import { Route as ZikirRouteImport } from './routes/zikir'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CamilerRoute = CamilerRouteImport.update({
+  id: '/camiler',
+  path: '/camiler',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EsmaRoute = EsmaRouteImport.update({
@@ -55,6 +61,7 @@ const ZikirRoute = ZikirRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/camiler': typeof CamilerRoute
   '/esma': typeof EsmaRoute
   '/halka': typeof HalkaRoute
   '/kible': typeof KibleRoute
@@ -64,6 +71,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/camiler': typeof CamilerRoute
   '/esma': typeof EsmaRoute
   '/halka': typeof HalkaRoute
   '/kible': typeof KibleRoute
@@ -74,6 +82,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/camiler': typeof CamilerRoute
   '/esma': typeof EsmaRoute
   '/halka': typeof HalkaRoute
   '/kible': typeof KibleRoute
@@ -83,12 +92,29 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/esma' | '/halka' | '/kible' | '/oku' | '/vakit' | '/zikir'
+  fullPaths:
+    | '/'
+    | '/camiler'
+    | '/esma'
+    | '/halka'
+    | '/kible'
+    | '/oku'
+    | '/vakit'
+    | '/zikir'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/esma' | '/halka' | '/kible' | '/oku' | '/vakit' | '/zikir'
+  to:
+    | '/'
+    | '/camiler'
+    | '/esma'
+    | '/halka'
+    | '/kible'
+    | '/oku'
+    | '/vakit'
+    | '/zikir'
   id:
     | '__root__'
     | '/'
+    | '/camiler'
     | '/esma'
     | '/halka'
     | '/kible'
@@ -99,6 +125,7 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  CamilerRoute: typeof CamilerRoute
   EsmaRoute: typeof EsmaRoute
   HalkaRoute: typeof HalkaRoute
   KibleRoute: typeof KibleRoute
@@ -114,6 +141,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/camiler': {
+      id: '/camiler'
+      path: '/camiler'
+      fullPath: '/camiler'
+      preLoaderRoute: typeof CamilerRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/esma': {
@@ -163,6 +197,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  CamilerRoute: CamilerRoute,
   EsmaRoute: EsmaRoute,
   HalkaRoute: HalkaRoute,
   KibleRoute: KibleRoute,
