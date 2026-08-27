@@ -13,8 +13,8 @@ export type Mosque = {
   address: string;
   lat: number;
   lng: number;
-  rating?: number;
-  openNow?: boolean;
+  rating?: number | undefined;
+  openNow?: boolean | undefined;
   distanceKm: number;
 };
 

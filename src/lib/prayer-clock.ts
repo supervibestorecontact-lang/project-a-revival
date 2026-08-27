@@ -26,7 +26,7 @@ export function loadCachedCoords(): Coords | null {
   }
 }
 
-function saveCachedCoords(c: Coords) {
+export function saveCoords(c: Coords) {
   try {
     localStorage.setItem(COORDS_KEY, JSON.stringify(c));
   } catch {
