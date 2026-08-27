@@ -26,7 +26,7 @@ export function loadCachedCoords(): Coords | null {
   }
 }
 
-function saveCachedCoords(c: Coords) {
+export function saveCoords(c: Coords) {
   try {
     localStorage.setItem(COORDS_KEY, JSON.stringify(c));
   } catch {
@@ -116,7 +116,7 @@ export function usePrayerClock(): PrayerClock {
       (pos) => {
         const next = { lat: pos.coords.latitude, lng: pos.coords.longitude };
         setCoords(next);
-        saveCachedCoords(next);
+        saveCoords(next);
         setLocated(true);
         setError(null);
       },
